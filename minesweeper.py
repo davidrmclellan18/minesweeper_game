@@ -6,6 +6,7 @@ class minesweeper:
         self.final_board = [["E"]*10 for i in range(10)]
         self.final_board = self.master_board(self.final_board)
         self.final_board = self.randomize_board(self.final_board)
+        self.bomb_positions = [(-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)]
 
     def master_board(self, board):
         board[0][9] = "M"
@@ -23,6 +24,8 @@ class minesweeper:
     def randomize_board(self, board):
         # using a master board then shuffling it
         temp_board = board
+        # choose so many random numbers
+        # those numbers are bombs on the board
         random.shuffle(temp_board)
         return temp_board
     
@@ -43,8 +46,12 @@ class minesweeper:
             # E and M is not displayed
             temp_array = []
             for item in array:
-                if item != "E" and item != "M":
+                if not "E" in item and not "M" in item:
                     temp_array.append(item)
+                elif "F" in item:
+                    temp_array.append("F")
+                elif "?" in item:
+                    temp_array.append("?")
                 else:
                     temp_array.append(" ")
             print(temp_array)
@@ -64,17 +71,47 @@ class minesweeper:
         position_click_str = input("Enter click coordinates (separate by comma): ")
         click_str = position_click_str.split(",")
         click = []
+        # need something for left and right click
         for i in click_str:
-            click.append(int(i.strip()))
+            try:
+                click.append(int(i.strip()))
+            except Exception:
+                click.append(str(i.strip()))
         self.final_board = self.update_board(self.final_board, click)
         return self.final_board
 
+    def right_click(self, board, click):
+        # basically, change things to different things :D
+        self.board = board
+        if self.board[click[0]][click[1]] == "M":
+            self.board[click[0]][click[1]] = "MF"
+        elif self.board[click[0]][click[1]] == 'MF':
+            self.board[click[0]][click[1]] = "M?"
+        elif self.board[click[0]][click[1]] == "M?":
+            self.board[click[0]][click[1]] = "M"
+        elif self.board[click[0]][click[1]] == "E":
+            self.board[click[0]][click[1]] = "EF"
+        elif self.board[click[0]][click[1]] == "EF":
+            self.board[click[0]][click[1]] = "E?"
+        elif self.board[click[0]][click[1]] == "E?":
+            self.board[click[0]][click[1]] = "E"
+        return self.board
+
     def update_board(self, board, click):
         self.board = board
-        if self.board[click[0]][click[1]] == 'M':
-            self.board[click[0]][click[1]] = 'X'
-        else:
-            self.update_tile(click)
+        try:
+            if click[2].lower() == "r":
+                self.right_click(board, click)
+            else:
+                if self.board[click[0]][click[1]] == 'M':
+                    self.board[click[0]][click[1]] = 'X'
+                else:
+                    self.update_tile(click)
+        except:
+            if self.board[click[0]][click[1]] == 'M':
+                self.board[click[0]][click[1]] = 'X'
+            else:
+                self.update_tile(click)
         return self.board
     
     def is_bomb(self, position_x, position_y):
@@ -86,25 +123,11 @@ class minesweeper:
         x_max_length = len(self.board)
         y_max_length = len(self.board[position[0]])
         total_bombs = 0
-        if position[0] + 1 < x_max_length:
-            if position[1] + 1 < y_max_length:
-                total_bombs += self.is_bomb(position[0] + 1, position[1] + 1)
-                total_bombs += self.is_bomb(position[0], position[1] + 1)
-            total_bombs += self.is_bomb(position[0] + 1, position[1])
-            if position[1] - 1 > -1:
-                total_bombs += self.is_bomb(position[0] + 1, position[1] - 1)
-                total_bombs += self.is_bomb(position[0], position[1] - 1)
-        else:
-            if position[1] + 1 < y_max_length:
-                total_bombs += self.is_bomb(position[0], position[1] + 1)
-            if position[1] - 1 > -1:
-                total_bombs += self.is_bomb(position[0], position[1] - 1)
-        if position[0] - 1 > -1:
-            if position[1] + 1 < y_max_length:
-                total_bombs += self.is_bomb(position[0] - 1, position[1] + 1)
-            total_bombs += self.is_bomb(position[0] - 1, position[1])
-            if position[1] - 1 > -1:
-                total_bombs += self.is_bomb(position[0] - 1, position[1] - 1)
+        for i in range(8):
+            if position[0] + self.bomb_positions[i][0] < 0 or position[0] + self.bomb_positions[i][0] >= x_max_length \
+                or position[1] + self.bomb_positions[i][1] < 0 or position[1] + self.bomb_positions[i][1] >= y_max_length:
+                continue
+            total_bombs += self.is_bomb(position[0] + self.bomb_positions[i][0], position[1] + self.bomb_positions[i][1])
         return total_bombs
     
     def recursively_call_update(self, position):
